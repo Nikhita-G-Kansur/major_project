@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Crowd Evacuation System</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            text-align: center; 
+            background: #0a0a1a; 
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: auto; 
+            padding: 20px;
+        }
+        h1 {
+            background: linear-gradient(90deg, #00d4ff, #7b2ffc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #8892b0;
+            margin-bottom: 20px;
+        }
+        .upload-area {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .upload-area input[type="file"] {
+            display: none;
+        }
+        .file-label {
+            background: #2d2d44;
+            padding: 10px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s;
+            color: white;
+        }
+        .file-label:hover {
+            background: #3d3d5a;
+            transform: scale(1.02);
+        }
+        .file-label.selected {
+            background: #00d47a;
+        }
+        #file-name {
+            color: #8892b0;
+            font-size: 13px;
+            min-width: 150px;
+        }
+        .btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+            opacity: 0.9;
+        }
+        .btn-primary {
+            background: #00d4ff;
+            color: #0a0a1a;
+        }
+        .btn-primary:disabled {
+            background: #2d2d44;
+            color: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-success {
+            background: #00d47a;
+            color: white;
+        }
+        .btn-danger {
+            background: #e94560;
+            color: white;
+        }
+        .btn-dashboard {
+            background: #7b2ffc;
+            color: white;
+        }
+        .btn-warning {
+            background: #f9ca24;
+            color: #0a0a1a;
+        }
+        
+        #video-display {
+            width: 100%;
+            max-width: 900px;
+            border-radius: 12px;
+            border: 2px solid #2d2d44;
+            background: #0a0a1a;
+            cursor: crosshair;
+        }
+        
+        /* Exit Selection Overlay */
+        #exit-selection-container {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            max-width: 900px;
+        }
+        #exit-selection-container canvas {
+            width: 100%;
+            border-radius: 12px;
+            border: 2px solid #2d2d44;
+            background: #0a0a1a;
+            cursor: crosshair;
+        }
+        
+        .selection-info {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+            display: none;
+        }
+        .selection-info .count {
+            font-size: 1.5em;
+            color: #00d4ff;
+            font-weight: bold;
+        }
+        .selection-info .hint {
+            color: #8892b0;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        .stat-item {
+            background: #16213e;
+            padding: 10px 20px;
+            border-radius: 8px;
+            min-width: 100px;
+        }
+        .stat-item .label {
+            color: #8892b0;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        .stat-item .value {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-badge.idle { background: #2d2d44; color: #888; }
+        .status-badge.processing { background: #f9ca2420; color: #f9ca24; border: 1px solid #f9ca24; }
+        .status-badge.complete { background: #00d47a20; color: #00d47a; border: 1px solid #00d47a; }
+        .status-badge.error { background: #e9456020; color: #e94560; border: 1px solid #e94560; }
+        .status-badge.selecting { background: #7b2ffc20; color: #7b2ffc; border: 1px solid #7b2ffc; }
+        
+        .footer {
+            margin-top: 30px;
+            color: #8892b0;
+            font-size: 13px;
+        }
+        .footer a {
+            color: #00d4ff;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Modal overlay for exit selection */
+        .exit-selection-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .exit-selection-overlay.active {
+            display: flex;
+        }
+        .exit-selection-box {
+            background: #16213e;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 95%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .exit-selection-box h2 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+        }
+        .exit-selection-box .instructions {
+            color: #8892b0;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        .exit-selection-box .exit-count-display {
+            color: #f9ca24;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .exit-selection-box .canvas-container {
+            position: relative;
+            background: #0a0a1a;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .exit-selection-box .canvas-container canvas {
+            width: 100%;
+            display: block;
+            cursor: crosshair;
+        }
+        .exit-selection-box .button-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .exit-marker {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: rgba(0, 212, 255, 0.6);
+            border: 3px solid #00d4ff;
+            transform: translate(-50%, -50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 12px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 AI Crowd Evacuation System</h1>
+        <p class="subtitle">Real-time crowd monitoring with intelligent path planning</p>
+        
+        <div class="upload-area">
+            <input type="file" id="videoInput" accept="video/*" onchange="updateFileName()">
+            <label for="videoInput" class="file-label" id="fileLabel">📁 Choose Video</label>
+            <span id="file-name">No file selected</span>
+            <button class="btn btn-primary" id="uploadBtn" onclick="uploadVideo()" disabled>📤 Upload & Select Exits</button>
+            <button class="btn btn-danger" onclick="stopVideo()">⏹ Stop</button>
+            <button class="btn btn-success" onclick="openDashboard()">📊 Dashboard</button>
+            <span id="status-badge" class="status-badge idle">⏳ Idle</span>
+        </div>
+        
+        <div class="stats-bar" id="stats-bar">
+            <div class="stat-item">
+                <div class="label">👥 People</div>
+                <div class="value" id="people-count" style="color: #00d4ff;">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="label">📊 Density</div>
+                <div class="value" id="density-display" style="color: #8892b0;">0%</div>
+            </div>
+            <div class="stat-item">
+                <div class="label">⏱️ Evacuation Time</div>
+                <div class="value" id="evac-time-display" style="color: #00d4ff;">0.0s</div>
+            </div>
+            <div class="stat-item">
+                <div class="label">🚪 Exits</div>
+                <div class="value" id="exit-count-display" style="color: #00d47a;">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="label">⚡ FPS</div>
+                <div class="value" id="fps-display" style="color: #00d47a;">0</div>
+            </div>
+        </div>
+        
+        <img id="video-display" src="/video_feed" alt="Video Feed" style="width:100%; max-width:900px; border-radius:12px; display:none;">
+        
+        <!-- Exit Selection Modal -->
+        <div class="exit-selection-overlay" id="exitSelectionOverlay">
+            <div class="exit-selection-box">
+                <h2>🚪 Select Exit Locations</h2>
+                <div class="instructions">Click on the image to mark exit locations. Click the green markers to remove them.</div>
+                <div class="exit-count-display">Exits Selected: <span id="exit-selection-count">0</span></div>
+                <div class="canvas-container" id="canvasContainer">
+                    <canvas id="exitCanvas"></canvas>
+                </div>
+                <div class="button-row">
+                    <button class="btn btn-success" onclick="confirmExits()">✅ Done - Start Processing</button>
+                    <button class="btn btn-danger" onclick="clearExits()">🗑️ Clear All Exits</button>
+                    <button class="btn btn-warning" onclick="closeExitSelection()">✖ Cancel</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>💡 <strong>How it works:</strong> Upload video → Click exits on first frame → Start evacuation analysis</p>
+            <p>View detailed analytics on the <a href="/dashboard" target="_blank">📊 Dashboard</a></p>
+        </div>
+    </div>
+
+    <script>
+        let selectedExits = [];
+        let exitCanvas = null;
+        let ctx = null;
+        let firstFrameImage = null;
+        let canvasWidth = 0;
+        let canvasHeight = 0;
+        let isProcessing = false;
+
+        // Update file name display
+        function updateFileName() {
+            const input = document.getElementById('videoInput');
+            const fileName = document.getElementById('file-name');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const fileLabel = document.getElementById('fileLabel');
+            
+            if (input.files && input.files.length > 0) {
+                const file = input.files[0];
+                fileName.textContent = '📹 ' + file.name;
+                fileName.style.color = '#00d47a';
+                uploadBtn.disabled = false;
+                fileLabel.classList.add('selected');
+                fileLabel.textContent = '✅ File Selected';
+            } else {
+                fileName.textContent = 'No file selected';
+                fileName.style.color = '#8892b0';
+                uploadBtn.disabled = true;
+                fileLabel.classList.remove('selected');
+                fileLabel.textContent = '📁 Choose Video';
+            }
+        }
+        
+        // Upload video and show exit selection
+        async function uploadVideo() {
+            const input = document.getElementById('videoInput');
+            const file = input.files[0];
+            
+            if (!file) {
+                alert('Please select a video file first!');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('video', file);
+            
+            const uploadBtn = document.getElementById('uploadBtn');
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = '⏳ Uploading...';
+            updateStatus('processing', '⏳ Uploading...');
+            
+            try {
+                const response = await fetch('/upload', { method: 'POST', body: formData });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    updateStatus('processing', '✅ Video uploaded, loading first frame...');
+                    // Load first frame for exit selection
+                    await loadFirstFrame();
+                } else {
+                    alert('Upload failed: ' + (result.message || 'Unknown error'));
+                    updateStatus('error', '❌ Upload failed');
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = '📤 Upload & Select Exits';
+                }
+            } catch (error) {
+                console.error('Upload failed:', error);
+                alert('Upload failed. Please try again.');
+                updateStatus('error', '❌ Error');
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = '📤 Upload & Select Exits';
+            }
+        }
+        
+        async function loadFirstFrame() {
+            try {
+                const response = await fetch('/api/get_first_frame');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    // Store image data
+                    firstFrameImage = data.image;
+                    canvasWidth = data.width;
+                    canvasHeight = data.height;
+                    
+                    // Show exit selection modal
+                    showExitSelection();
+                    updateStatus('selecting', '🎯 Click exits on the image');
+                } else {
+                    alert('Error loading first frame: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error loading first frame:', error);
+                alert('Error loading first frame. Please try again.');
+            }
+        }
+        
+        function showExitSelection() {
+            const overlay = document.getElementById('exitSelectionOverlay');
+            overlay.classList.add('active');
+            
+            // Initialize canvas
+            setTimeout(() => {
+                const canvas = document.getElementById('exitCanvas');
+                const container = document.getElementById('canvasContainer');
+                
+                // Get container width
+                const containerWidth = container.clientWidth;
+                const aspectRatio = canvasHeight / canvasWidth;
+                const displayWidth = Math.min(containerWidth, 900);
+                const displayHeight = displayWidth * aspectRatio;
+                
+                canvas.width = canvasWidth;
+                canvas.height = canvasHeight;
+                canvas.style.width = displayWidth + 'px';
+                canvas.style.height = displayHeight + 'px';
+                
+                ctx = canvas.getContext('2d');
+                exitCanvas = canvas;
+                
+                // Draw the first frame
+                const img = new Image();
+                img.onload = function() {
+                    ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+                    drawExitMarkers();
+                };
+                img.src = 'data:image/jpeg;base64,' + firstFrameImage;
+                
+                // Add click handler
+                canvas.onclick = function(e) {
+                    const rect = canvas.getBoundingClientRect();
+                    const scaleX = canvas.width / rect.width;
+                    const scaleY = canvas.height / rect.height;
+                    
+                    const x = (e.clientX - rect.left) * scaleX;
+                    const y = (e.clientY - rect.top) * scaleY;
+                    
+                    // Check if clicking on an existing exit (to remove it)
+                    let removed = false;
+                    for (let i = 0; i < selectedExits.length; i++) {
+                        const ex = selectedExits[i];
+                        const dist = Math.sqrt((x - ex[0])**2 + (y - ex[1])**2);
+                        if (dist < 20) {
+                            selectedExits.splice(i, 1);
+                            removed = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!removed) {
+                        selectedExits.push([x, y]);
+                    }
+                    
+                    drawExitMarkers();
+                    document.getElementById('exit-selection-count').textContent = selectedExits.length;
+                };
+            }, 100);
+        }
+        
+        function drawExitMarkers() {
+            if (!ctx || !exitCanvas) return;
+            
+            // Redraw the image
+            const img = new Image();
+            img.onload = function() {
+                ctx.clearRect(0, 0, exitCanvas.width, exitCanvas.height);
+                ctx.drawImage(img, 0, 0, exitCanvas.width, exitCanvas.height);
+                
+                // Draw exit markers
+                const colors = ['#00d4ff', '#7b2ffc', '#00d47a', '#f9ca24', '#e94560', '#ff6b6b', '#ff9ff3', '#54a0ff'];
+                
+                selectedExits.forEach((exit, index) => {
+                    const x = exit[0];
+                    const y = exit[1];
+                    const color = colors[index % colors.length];
+                    
+                    // Glow
+                    const gradient = ctx.createRadialGradient(x, y, 0, x, y, 25);
+                    gradient.addColorStop(0, color + '80');
+                    gradient.addColorStop(1, color + '00');
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 25, 0, 2 * Math.PI);
+                    ctx.fill();
+                    
+                    // Outer circle
+                    ctx.beginPath();
+                    ctx.arc(x, y, 18, 0, 2 * Math.PI);
+                    ctx.fillStyle = color + '40';
+                    ctx.fill();
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                    
+                    // Inner circle
+                    ctx.beginPath();
+                    ctx.arc(x, y, 10, 0, 2 * Math.PI);
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                    
+                    // Exit number
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(index + 1, x, y);
+                    
+                    // Label
+                    ctx.fillStyle = color;
+                    ctx.font = 'bold 12px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    ctx.fillText('Exit ' + (index + 1), x, y - 22);
+                });
+            };
+            img.src = 'data:image/jpeg;base64,' + firstFrameImage;
+        }
+        
+        function confirmExits() {
+            if (selectedExits.length < 1) {
+                alert('Please select at least 1 exit location!');
+                return;
+            }
+            
+            // Send exits to backend
+            fetch('/api/set_exits', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ exits: selectedExits })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Close modal
+                    closeExitSelection();
+                    
+                    // Start video processing
+                    document.getElementById('video-display').style.display = 'block';
+                    document.getElementById('video-display').src = '/video_feed?' + Date.now();
+                    
+                    // Update exit count display
+                    document.getElementById('exit-count-display').textContent = data.count;
+                    
+                    updateStatus('processing', '✅ Processing with ' + data.count + ' exits');
+                    
+                    // Enable dashboard
+                    const uploadBtn = document.getElementById('uploadBtn');
+                    uploadBtn.textContent = '✅ Processing';
+                    
+                    // Start stats polling
+                    startStatsPolling();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error setting exits:', error);
+                alert('Error setting exits. Please try again.');
+            });
+        }
+        
+        function clearExits() {
+            selectedExits = [];
+            document.getElementById('exit-selection-count').textContent = '0';
+            drawExitMarkers();
+        }
+        
+        function closeExitSelection() {
+            const overlay = document.getElementById('exitSelectionOverlay');
+            overlay.classList.remove('active');
+            
+            // If no exits selected and video not started, allow retry
+            if (selectedExits.length === 0 && !isProcessing) {
+                const uploadBtn = document.getElementById('uploadBtn');
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = '📤 Upload & Select Exits';
+                updateStatus('idle', '⏳ Idle');
+            }
+        }
+        
+        function stopVideo() {
+            document.getElementById('video-display').src = '';
+            document.getElementById('video-display').style.display = 'none';
+            document.getElementById('people-count').textContent = '0';
+            document.getElementById('density-display').textContent = '0%';
+            document.getElementById('evac-time-display').textContent = '0.0s';
+            document.getElementById('exit-count-display').textContent = '0';
+            document.getElementById('fps-display').textContent = '0';
+            updateStatus('idle', '⏳ Idle');
+            
+            const uploadBtn = document.getElementById('uploadBtn');
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = '📤 Upload & Select Exits';
+            
+            // Reset exits
+            selectedExits = [];
+            isProcessing = false;
+            
+            // Stop polling
+            if (window.statsInterval) {
+                clearInterval(window.statsInterval);
+            }
+        }
+        
+        function openDashboard() {
+            window.open('/dashboard', '_blank');
+        }
+        
+        function updateStatus(type, text) {
+            const badge = document.getElementById('status-badge');
+            badge.className = 'status-badge ' + type;
+            badge.textContent = text;
+        }
+        
+        // Stats polling
+        function startStatsPolling() {
+            if (window.statsInterval) {
+                clearInterval(window.statsInterval);
+            }
+            window.statsInterval = setInterval(fetchStats, 1000);
+            fetchStats();
+        }
+        
+        async function fetchStats() {
+            try {
+                const response = await fetch('/api/stats');
+                if (!response.ok) return;
+                
+                const data = await response.json();
+                
+                document.getElementById('people-count').textContent = data.total_people || 0;
+                
+                const density = data.density_level || 0;
+                document.getElementById('density-display').textContent = Math.round(density) + '%';
+                document.getElementById('density-display').style.color = 
+                    density < 20 ? '#00d4ff' : density < 50 ? '#f9ca24' : '#e94560';
+                
+                document.getElementById('evac-time-display').textContent = (data.evacuation_time || 0).toFixed(1) + 's';
+                document.getElementById('fps-display').textContent = (data.fps || 0).toFixed(1);
+                
+                // Exit count from backend
+                if (data.exits) {
+                    document.getElementById('exit-count-display').textContent = data.exits.length || 0;
+                }
+                
+                if (data.status === 'complete') {
+                    updateStatus('complete', '✅ Complete');
+                }
+            } catch (error) {
+                console.error('Stats fetch failed:', error);
+            }
+        }
+        
+        // Check exit status on page load
+        async function checkExitStatus() {
+            try {
+                const response = await fetch('/api/exit_status');
+                const data = await response.json();
+                if (data.exits_set && data.exit_count > 0) {
+                    document.getElementById('exit-count-display').textContent = data.exit_count;
+                    document.getElementById('video-display').style.display = 'block';
+                    document.getElementById('video-display').src = '/video_feed?' + Date.now();
+                    updateStatus('processing', '✅ Processing with ' + data.exit_count + ' exits');
+                    startStatsPolling();
+                }
+            } catch (error) {
+                console.error('Error checking exit status:', error);
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            checkExitStatus();
+        });
+        
+        // Keyboard shortcut: Ctrl+U to open file picker
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'u') {
+                e.preventDefault();
+                document.getElementById('videoInput').click();
+            }
+        });
+    </script>
+</body>
+</html>
